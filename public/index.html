@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+    <head>
+      <title>Hello, WebVR! - A-Frame</title>
+      <meta name="description" content="Hello, WebVR! - A-Frame">
+      <script src="/js/aframe.min.js"></script>
+      <!-- loading in our js file with custom component -->
+      <script src="/js/spinning-effect.js"></script>
+      <script src="/js/visible-effect.js"></script>
+      <script src="/js/box.js"></script>
+      <script src="/js/aframe-environment-component.min.js"></script>
+      <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script> 
+     
+
+      <!-- need a user gesture to allow sound on some browsers i.e. iOS -->
+      <link rel="stylesheet" href="/css/user-gesture.css">
+      <script>
+        AFRAME.registerComponent('start-experience', {
+          init: function () {
+            //we can't play sound on some browsers until we have some user interaction
+            //this means we should only start playing ambient music after this button is clicked
+            console.log('scene loaded');
+            document.querySelector('#loading-animation').style.display='none';
+            document.querySelector('#user-gesture-button').style.display='block';
+          }
+        });
+
+        AFRAME.registerComponent('abox', {
+  schema: {
+    width: {type: 'number', default: 1},
+    height: {type: 'number', default: 1},
+    depth: {type: 'number', default: 1},
+    color: {type: 'color', default: '#AAA'}
+  },
+ 
+
+  init: function () {
+    var data = this.data;
+    var el = this.el;
+    this.geometry = new THREE.BoxBufferGeometry(data.width, data.height, data.depth);
+    this.material = new THREE.MeshStandardMaterial({color: data.color});
+    this.mesh = new THREE.Mesh(this.geometry, this.material);
+    el.setObject3D('mesh', this.mesh);
+  },
+  remove: function () {
+    this.el.removeObject3D('mesh');
+  }
+});
+        
+
+
+        //function called from user-gesture click
+        const startExperience = function() {
+          //hide user-gesture overlay
+          document.querySelector('#user-gesture-overlay').style.display='none';
+          
+          //start all ambient music
+          const ambientSounds = document.querySelectorAll('.ambient-music');
+          ambientSounds.forEach(function(soundEntity) {
+            soundEntity.components.sound.playSound();
+          });
+        }
+      </script>
+    </head>
+    <body>
+
+      <!-- by having a 2D "user gesture" we can allow sounds to play and the like. We will make it an overlay so nothing can be clicked before the user gesture ... -->
+      <!-- https://developers.google.com/web/updates/2017/09/autoplay-policy-changes (fun memes on webpage;) -->
+      <div id="user-gesture-overlay">
+        <div class="center">
+          <button id="user-gesture-button" onclick="startExperience();">enter experience</button>
+          <!-- loading gif from: https://www.behance.net/gallery/31234507/Open-source-Loading-GIF-Icons-Vol-1 -->
+          <img id="loading-animation" src="/assets/loader_animation.gif">
+        </div>
+      </div>
+
+      <a-scene start-experience>
+          <a-assets timeout="10000">
+          <!-- all Earth textures from https://www.solarsystemscope.com/textures/ . slightly modified -->
+          <!-- NEW: loading in additional textures -->
+          <img id="earth_map"        src="/assets/2k_earth_daymap.jpg" crossorigin="anonymous">
+          <img id="earth_normal"     src="/assets/EarthNormals.png" crossorigin="anonymous">
+          <img id="earth_roughness"  src="/assets/2k_earth_roughness_map.jpg" crossorigin="anonymous">
+          <img id="earth_metalness"  src="/assets/2k_earth_metalness_map.jpg" crossorigin="anonymous">
+          <img id="earth_clouds"     src="/assets/2k_earth_clouds.png" crossorigin="anonymous">
+
+          <!-- NEW: milky way texture from HDRlabs.com: http://www.hdrlabs.com/sibl/archive.html -->
+          <!-- using this for Erath's reflections -->
+          <img id="milky_way"      src="/assets/Milkyway_BG.jpg" crossorigin="anonymous">
+
+          <!-- NEW: ambient "intro' music from https://www.soundstripe.com/royalty-free-intro-music -->
+          <audio id="space_music" src="/assets/intro.mp3" preload="auto" crossorigin="anonymous"></audio>
+
+          <!-- 3D models from Sketchfab.com, and converted from .gltf to .glb using https://glb-packer.glitch.me -->
+          <!-- mars: https://sketchfab.com/3d-models/mars-2b46962637ee4311af8f0d1d0709fbb2 -->
+          <!-- methane molecule: https://sketchfab.com/3d-models/tetrahedral-structure-of-methane-6e09c1451691443cb520e8ff18bfe5c1#download -->
+          <!-- asteroid: https://sketchfab.com/3d-models/asteroid-01-df95d3da67aa4c769ec81394e0b0ffef -->
+          <a-asset-item id="mars_model"     response-type="arraybuffer" src="/assets/mars.glb"></a-asset-item>
+          <a-asset-item id="methane_model"  response-type="arraybuffer" src="/assets/methane.glb"></a-asset-item>
+          <a-asset-item id="asteroid_model" response-type="arraybuffer" src="/assets/asteroid.glb"></a-asset-item>
+
+          <!-- following images from NASA.gov -->
+          <img id="mars_img"     src="/assets/MarsSurface.jpg" crossorigin="anonymous">
+          <img id="methane_img"  src="/assets/MarsMethane.jpg" crossorigin="anonymous">
+          <img id="earth_img"    src="/assets/Earth.jpg" crossorigin="anonymous">
+          <img id="asteroid_img" src="/assets/Panspermia.jpg" crossorigin="anonymous">
+        </a-assets>
+
+        <a-entity camera wasd-controls look-controls position="0 1.6 0">
+          <a-entity cursor="rayOrigin:mouse;" raycaster="far:20; interval:200; objects:.interactive"></a-entity>
+          <a-entity light="type:spot; intensity:0; castShadow:true; shadowBias:-0.0005; angle:40; penumbra:0.3;" position="0.5 -0.5 0" rotation="0 0 0"></a-entity>
+        </a-entity>
+                
+        <!-- we will start autoplay music after a user-gesture. see js in <head> -->
+          <a-entity class="ambient-music" sound="src:#space_music; autoplay:false;"></a-entity>
+
+        <!-- "models" as a textured sphere and glbs from Sketchfab -->
+        <!-- NEW: added cloud layer, additional textures, and animation to earth -->
+        <!-- NEW: adding rotation animations to objects -->
+        <a-entity id="earth" position="0 3.5 6">
+          <a-entity  geometry="primitive:sphere; radius:2.0" 
+                     material="src:#earth_map; normalMap:#earth_normal; roughnessMap:#earth_roughness; metalnessMap:#earth_metalness; sphericalEnvMap:#milky_way"
+                     animation="property:rotation; to:0 360 0; loop:true; dur:70000"
+                     shadow
+                     visible="false"
+                     ></a-entity>
+
+          <a-entity  geometry="primitive:sphere; radius:2.01" 
+                     material="src:#earth_clouds; transparent:true;"
+                     animation="property:rotation; to:0 360 0; loop:true; dur:120000"
+                     shadow="cast:false; receive:false;"
+                     visible="false"
+                     ></a-entity>
+        </a-entity>
+
+        <a-entity id="mars" position="6 3.5 0" rotation="0 -90 0" scale="1 1 1"
+                  gltf-model="#mars_model"
+                  animation="property:rotation; to:0 360 0; loop:true; dur:50000"
+                  shadow></a-entity>
+
+        <a-entity id="methane" position="0 3.5 -6" rotation="0 0 0" scale="1 1 1"
+                  gltf-model="#methane_model"
+                  animation="property:rotation; to:0 360 0; loop:true; dur:40000"
+                  shadow></a-entity>
+
+        <a-entity id="asteroid" position="-6 3.5 0" rotation="0 90 0" scale="0.01 0.01 0.01"
+                  gltf-model="#asteroid_model"
+                  animation="property:rotation; to:0 360 0; loop:true; dur:60000"
+                  shadow></a-entity>
+
+        <a-entity id="plane" position="0 0.5 -4" rotation="-30 0 0" scale="1 1 1">
+          <a-entity geometry="primitive:plane; width:1.5; height:1.0;" material="src:#earth_img" position="0.65 0 0.01" shadow="cast:false; receive:true;"></a-entity>
+          <a-entity geometry="primitive:box; width:3.0; height:1.2; depth:0.2;" material="color:white;" position="0 0 -0.11" shadow></a-entity>
+          <a-entity text="value:Note:; 
+                          color:black; font:roboto; width:1.3; anchor:left; baseline:top; wrapCount:12;" position="-1.4 0.5 0.01" ></a-entity>
+          <a-entity text="value:Please click red button to see/unsee this board. Click blue button to spin the roof;
+                          color:black; font:roboto; width:1.25; anchor:left; baseline:top; wrapCount:18;" position="-1.4 0.25 0.01" ></a-entity>
+        </a-entity>
+        
+        <a-entity id="universal_button">
+          <!-- attaching our custom component to our button entity with a defined property -->
+          <a-entity class="button interactive" visible-effect="duration:18000;" position="0 0.6 -2" geometry="primitive:cylinder; radius:0.15; height:0.2;" material="color:rgb(255, 100, 100)"
+                    animation__mouseenter="property:material.color; type:color; to:rgb(255, 0, 0); startEvents:mouseenter; dur:200"
+                    animation__mouseleave="property:material.color; type:color; to:rgb(255, 100, 100); startEvents:mouseleave; dur:200"
+                    animation__click="property:position; from:0 0.55 -2; to:0 0.6 -2; startEvents:click; dur:300" shadow></a-entity>
+          <a-entity position="0 0.3 -2" geometry="primitive:box; width:0.5; depth:0.5; height:0.6;" material="color:rgb(255, 255, 255)" shadow></a-entity>
+        </a-entity>
+
+        <a-entity id="universal_button2">
+          <!-- attaching our custom component to our button entity with a defined property -->
+          <a-entity class="button interactive" spinning-effect="duration:18000;" position="1.5 0.6 -2" geometry="primitive:cylinder; radius:0.15; height:0.2;" material="color:rgb(100, 100, 255)"
+                    animation__mouseenter="property:material.color; type:color; to:rgb(0, 0, 255); startEvents:mouseenter; dur:200"
+                    animation__mouseleave="property:material.color; type:color; to:rgb(100, 100, 255); startEvents:mouseleave; dur:200"
+                    animation__click="property:position; from:1.5 0.55 -2; to:1.5 0.6 -2; startEvents:click; dur:300" shadow></a-entity>
+          <a-entity position="1.5 0.3 -2" geometry="primitive:box; width:0.5; depth:0.5; height:0.6;" material="color:rgb(255, 255, 255)" shadow></a-entity>
+        </a-entity>
+
+        <a-entity id="plane" position="4 0.5 0" rotation="-30 -90 0" scale="1 1 1">
+          <a-entity geometry="primitive:plane; width:1.5; height:1.0;" material="src:#mars_img" position="0.65 0 0.01" shadow="cast:false; receive:true;"></a-entity>
+          <a-entity geometry="primitive:box; width:3.0; height:1.2; depth:0.2;" material="color:white;" position="0 0 -0.11" shadow></a-entity>
+          <a-entity text="value:Mars; 
+                          color:black; font:roboto; width:1.3; anchor:left; baseline:top; wrapCount:12;" position="-1.4 0.5 0.01"></a-entity>
+          <a-entity text="value:The fourth planet from the Sun. On its surface is the largest planetary mountain - Olympus Mons.; 
+                          color:black; font:roboto; width:1.25; anchor:left; baseline:top; wrapCount:18;" position="-1.4 0.25 0.01"></a-entity>
+        </a-entity>
+
+        <a-entity id="room">
+          <a-entity class="ground"  geometry="primitive:plane; width:14; height:14;" material="color:white;" position="0 0.01 0" rotation="-90 0 0" shadow="cast:false; receive:true;"></a-entity>
+          <a-entity id="walls">
+            <a-entity class="wall"    geometry="primitive:plane; width:30; height:3;" material="color:white;" position="15 8 0"  rotation="0 -90 0" shadow="cast:false; receive:true;"></a-entity>
+            <a-entity class="wall"    geometry="primitive:plane; width:30; height:3;" material="color:white;" position="-15 8 0" rotation="0 90 0" shadow="cast:false; receive:true;"></a-entity>
+            <a-entity class="wall"    geometry="primitive:plane; width:30; height:3;" material="color:white;" position="0 8 15"  rotation="0 180 0" shadow="cast:false; receive:true;"></a-entity>
+            <a-entity class="wall"    geometry="primitive:plane; width:30; height:3;" material="color:white;" position="0 8 -15" rotation="0 0 0" shadow="cast:false; receive:true;"></a-entity>
+          </a-entity>
+        </a-entity>
+        
+        <a-entity id="plane" position="0 0.5 4" rotation="-30 180 0" scale="1 1 1">
+          <a-entity geometry="primitive:plane; width:1.5; height:1.0;" material="src:#methane_img" position="0.65 0 0.01" shadow="cast:false; receive:true;"></a-entity>
+          <a-entity geometry="primitive:box; width:3.0; height:1.2; depth:0.2;" material="color:white;" position="0 0 -0.11" shadow="cast:true; receive:true;"></a-entity>
+          <a-entity text="value:Methane; 
+                          color:black; font:roboto; width:1.3; anchor:left; baseline:top; wrapCount:12;" position="-1.4 0.5 0.01" ></a-entity>
+          <a-entity text="value:There is seasonal methane being emitted from Mars' surface suggesting possible life underground.; 
+                          color:black; font:roboto; width:1.25; anchor:left; baseline:top; wrapCount:18;" position="-1.4 0.25 0.01" ></a-entity>
+        </a-entity>
+
+        <a-entity id="plane" position="-4 0.5 0" rotation="-30 90 0" scale="1 1 1">
+          <a-entity geometry="primitive:plane; width:1.5; height:1.0;" material="src:#asteroid_img" position="0.65 0 0.01" shadow="cast:false; receive:true;"></a-entity>
+          <a-entity geometry="primitive:box; width:3.0; height:1.2; depth:0.2;" material="color:white;" position="0 0 -0.11" shadow="cast:true; receive:true;"></a-entity>
+          <a-entity text="value:Asteroid; 
+                          color:black; font:roboto; width:1.3; anchor:left; baseline:top; wrapCount:12;" position="-1.4 0.5 0.01"></a-entity>
+          <a-entity text="value:The panspermia hypothesis suggests that life may be carried from one planet to another via objects such as asteroids.; 
+                          color:black; font:roboto; width:1.25; anchor:left; baseline:top; wrapCount:18;" position="-1.4 0.25 0.01" ></a-entity>
+        </a-entity>
+        
+        <a-entity environment="preset:forest"></a-entity>
+      </a-scene>
+    </body>
+</html>
